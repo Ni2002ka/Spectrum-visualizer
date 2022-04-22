@@ -1,35 +1,35 @@
 package visualizer;
 
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.Toolkit;
 
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.Clip;
 import javax.swing.JPanel;
-import javax.swing.Timer;
 
 @SuppressWarnings("serial")
-public class AudioPanel extends JPanel {
+public class AudioPanel extends JPanel implements Runnable {
 	int[][] processedAudio;
 	int scalingFactor;
 	private int width = 800;
 	private int height = 200;
 	private AudioInputStream song;
 	private float frameRate;
-	
+	Thread visualizerThread;
 
 	public AudioPanel(int[][] processedAudio, AudioInputStream song) {
-		this.setPreferredSize(new Dimension(width, height));
+		this.setPreferredSize(new Dimension(width, 2 * height));
 		this.processedAudio = processedAudio;
 		scalingFactor = processedAudio[0].length / width;
 		this.song = song;
 		frameRate = song.getFormat().getFrameRate();
-		
-		doStuff();
+
+		visualizerThread = new Thread(this);
+		visualizerThread.start();
 	}
 
 	private int[] compressedAudioArray(int numChannel) {
@@ -64,50 +64,64 @@ public class AudioPanel extends JPanel {
 	}
 
 	private int[] channelZeroCompressed;
+	private int[] channelOneCompressed;
 	private Clip clip;
-	private int i=0;
-	private Timer timer;
-	
-	public void doStuff() {
+	private int i = 0;
+	long currentTime;
+
+	public boolean update() {
+		if (i < width - 1) {
+			repaint();
+			return true;
+		} else {
+			clip.close();
+			return false;
+		}
+	}
+
+	public void run() {
 		channelZeroCompressed = compressedAudioArray(0);
+		channelOneCompressed = compressedAudioArray(1);
 		try {
-			clip=AudioSystem.getClip();
-			int delay=(int)(1000*scalingFactor/frameRate);
+			clip = AudioSystem.getClip();
+			long delay = (long) (1000000000 / (double) frameRate) * scalingFactor;
+			System.out.println(delay);
 			clip.open(song);
-			timer = new Timer(delay-10, new ActionListener() {
-				
-				@Override
-				public void actionPerformed(ActionEvent e) {
-					if (i<width-1) {
-						repaint();
-					}
-					else {
-						clip.close();
-						timer.stop();
-					}
-					
-				}
-			});
-            timer.setRepeats(true);
-            timer.setCoalesce(false);
-            timer.setInitialDelay(0);
-            timer.start(); 
-			
 			clip.start();
-			
-			
+
+			currentTime = System.nanoTime();
+			while (update()) {
+				while (System.nanoTime() - currentTime < delay) {
+				}
+				currentTime = System.nanoTime();
+			}
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
-	
+
+	Graphics2D g2d;
+
 	public void paint(Graphics g) {
-		Graphics2D g2d = (Graphics2D) g;
+		g2d = (Graphics2D) g;
+
+		g2d.setColor(Color.gray);
 		g2d.drawLine(0, height / 2, width, height / 2);
-		
-		g2d.drawLine(i, 100 - channelZeroCompressed[i], i + 1, 100 - channelZeroCompressed[i + 1]);
+
+		g2d.setColor(Color.black);
+		g2d.drawLine(0, height, width, height);
+
+		g2d.setColor(Color.gray);
+		g2d.drawLine(0, 3 * height / 2, width, 3 * height / 2);
+
+		g2d.setColor(Color.blue);
+		g2d.drawLine(i, height / 2 - channelZeroCompressed[i], i + 1, height / 2 - channelZeroCompressed[i + 1]);
+		g2d.setColor(Color.red);
+		g2d.drawLine(i, 3 * height / 2 - channelOneCompressed[i], i + 1, 3 * height / 2 - channelOneCompressed[i + 1]);
 		i++;
-		
+
+		Toolkit.getDefaultToolkit().sync();
 	}
 
 }
