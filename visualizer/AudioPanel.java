@@ -5,6 +5,7 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Toolkit;
+import java.util.ArrayList;
 
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
@@ -13,23 +14,44 @@ import javax.swing.JPanel;
 
 @SuppressWarnings("serial")
 public class AudioPanel extends JPanel implements Runnable {
-	int[][] processedAudio;
-	int scalingFactor;
-	private int width = 800;
-	private int height = 200;
+	private final int[][] processedAudio;
+	private final int scalingFactor;
+	private final int width = 1200;
+	private final int height = 200;
 	private AudioInputStream song;
-	private float frameRate;
+	private final float frameRate;
 	Thread visualizerThread;
+	private final ArrayList<Integer> channelZeroNotePresses;
+	private final ArrayList<Integer> channelOneNotePresses;
 
-	public AudioPanel(int[][] processedAudio, AudioInputStream song) {
+	private void set_up() {
 		this.setPreferredSize(new Dimension(width, 2 * height));
+		visualizerThread = new Thread(this);
+		visualizerThread.start();
+		
+	}
+	public AudioPanel(int[][] processedAudio, AudioInputStream song) {
 		this.processedAudio = processedAudio;
 		scalingFactor = processedAudio[0].length / width;
 		this.song = song;
 		frameRate = song.getFormat().getFrameRate();
+		channelZeroNotePresses=null;
+		channelOneNotePresses=null;
+		
+		set_up();
 
-		visualizerThread = new Thread(this);
-		visualizerThread.start();
+	}
+
+	public AudioPanel(int[][] processedAudioArray, AudioInputStream song, ArrayList<Integer> channelZeroNotePresses,
+			ArrayList<Integer> channelOneNotePresses) {
+		this.processedAudio = processedAudioArray;
+		scalingFactor = processedAudioArray[0].length / width;
+		this.song = song;
+		frameRate = song.getFormat().getFrameRate();
+		this.channelZeroNotePresses=channelZeroNotePresses;
+		this.channelOneNotePresses=channelOneNotePresses;
+		
+		set_up();
 	}
 
 	private int[] compressedAudioArray(int numChannel) {
@@ -85,7 +107,7 @@ public class AudioPanel extends JPanel implements Runnable {
 		try {
 			clip = AudioSystem.getClip();
 			long delay = (long) (1000000000 / (double) frameRate) * scalingFactor;
-			System.out.println(delay);
+//			System.out.println(delay);
 			clip.open(song);
 			clip.start();
 
@@ -103,11 +125,28 @@ public class AudioPanel extends JPanel implements Runnable {
 
 	Graphics2D g2d;
 
+	private void drawNoteLines() {
+		//channel zero
+		for (int j : channelZeroNotePresses) {
+			int x=j/scalingFactor;
+			g2d.drawLine(x, 10, x, height-10);;
+		}
+		
+		//channel one
+		for (int j : channelOneNotePresses) {
+			int x=j/scalingFactor;
+			g2d.drawLine(x, height+10 , x, 2*height-10);;
+		}
+	}
+	
 	public void paint(Graphics g) {
 		g2d = (Graphics2D) g;
 
 		g2d.setColor(Color.gray);
 		g2d.drawLine(0, height / 2, width, height / 2);
+		if (channelOneNotePresses !=null) {
+			drawNoteLines();
+		}
 
 		g2d.setColor(Color.black);
 		g2d.drawLine(0, height, width, height);

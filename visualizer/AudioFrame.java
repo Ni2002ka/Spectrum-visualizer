@@ -1,5 +1,7 @@
 package visualizer;
 
+import java.util.ArrayList;
+
 import javax.sound.sampled.AudioInputStream;
 import javax.swing.JFrame;
 
@@ -7,9 +9,7 @@ import javax.swing.JFrame;
 public class AudioFrame extends JFrame {
 	AudioPanel panel;
 
-	public AudioFrame(int[][] processedAudio, AudioInputStream song) {
-		panel = new AudioPanel(processedAudio, song);
-
+	private void set_up() {
 		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		this.add(panel);
 		// why
@@ -17,5 +17,17 @@ public class AudioFrame extends JFrame {
 		// center of screen
 		this.setLocationRelativeTo(null);
 		this.setVisible(true);
+	}
+	public AudioFrame(int[][] processedAudio, AudioInputStream song) {
+		panel = new AudioPanel(processedAudio, song);
+
+		set_up();
+	}
+
+	public AudioFrame(int[][] processedAudioArray, AudioInputStream song, ArrayList<Integer> channelZeroNotePresses,
+			ArrayList<Integer> channelOneNotePresses) {
+		panel = new AudioPanel(processedAudioArray, song, channelZeroNotePresses, channelOneNotePresses);
+
+		set_up();
 	}
 }
